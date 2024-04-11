@@ -41,3 +41,14 @@ class FreeFormImageInpaint(nn.module):
         coarse_out = self.coarse_network(input)
         # clip output so values are between -1 and 1
         coarse_clip = torch.clamp(coarse_out, -1, 1)
+
+    def loss_function(self, x_hat, x, masks, alpha):
+        # TODO: convert x/x_hat to just masked and unmasked portion
+        masked, masked_hat, unmasked, unmasked_hat = 
+
+        mask_bit_ratio = torch.mean(masks, -1) #take the ratio of masked to unmasked bits
+        bit_mask_ratio = torch.mean(1 - masks, -1) #take the ratio of unmasked to masked bits
+        masked_loss = alpha * torch.mean(torch.abs(masked - masked_hat) / mask_bit_ratio)
+        unmasked_loss = alpha * torch.mean(torch.abs(unmasked - unmasked_hat) / mask_bit_ratio)
+        loss = masked_loss + unmasked_loss
+        return loss
