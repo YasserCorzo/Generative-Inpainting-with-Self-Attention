@@ -38,7 +38,7 @@ class FreeFormImageInpaint(nn.module):
         # input will contain masked images
         x = x.permute(0, 3, 1, 2) # batch_size x channels x 256 x 256
         masks = masks.unsqueeze(1) # batch_size x 1 x 256 x 256
-        masked_imgs = x * (1 - x) 
+        masked_imgs = x * (1 - masks) 
         input = torch.cat([masked_imgs, masks], dim=1) # batch_size x (channels + 1) x 256 x 256
         
         # coarse network
@@ -50,7 +50,13 @@ class FreeFormImageInpaint(nn.module):
 
     def loss_function(self, x_hat, x, masks, alpha):
         # TODO: convert x/x_hat to just masked and unmasked portion
-        masked, masked_hat, unmasked, unmasked_hat = 
+        x = x.permute(0, 3, 1, 2) # batch_size x channels x 256 x 256
+        x_hat = x_hat.permute(0, 3, 1, 2) # batch_size x channels x 256 x 256
+        masks = masks.unsqueeze(1) # batch_size x 1 x 256 x 256
+        unmasked = x * masks
+        unmasked_hat = x_hat * masks
+        masked = x * (1 - masks)
+        masked_hat = x_hat * (1 - masks)
 
         mask_bit_ratio = torch.mean(masks, -1) #take the ratio of masked to unmasked bits
         bit_mask_ratio = torch.mean(1 - masks, -1) #take the ratio of unmasked to masked bits
