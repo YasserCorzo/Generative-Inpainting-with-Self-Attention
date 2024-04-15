@@ -1,39 +1,45 @@
+import torch
+import torch.nn as nn
+
+from model import *
+from preprocess import *
+from torchsummary import summary
+
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
 input_channels = 64
 n_epochs = 20
 alpha = 0.02
 learning_rate = 0.001
-optimizer = torch.optim.Adam(inpaint.parameters(), lr=learning_rate)
-masks = None
+batch_size = 2
 
-from torchsummary import summary
-inpaint = FreeFormImageInpaint(input_channels).to(device)
-summary(inpaint,(1,256,256), masks)
+image_loader = get_images(batch_size)
+image_size = (256, 256)
+square_size = 100
+binary_mask = get_mask(image_size, square_size)
+
+inpaint = FreeFormImageInpaint().to(device)
+optimizer = torch.optim.Adam(inpaint.parameters(), lr=learning_rate)
 
 for epoch in range(n_epochs):
     inpaint.train()
     train_loss = 0
     loss = 0
-    for batch_idx, (data, labels) in enumerate(loader_train):
-        #TODO
-        # clear the gradients of all optimized variables
-        # forward pass:
-        # calculate the loss using the loss function defined above
-        # backward pass: compute gradient of the loss with respect to model parameters
-        # perform a single optimization step (parameter update)
-        # update running training loss
+    for batch_idx, (data, _) in enumerate(image_loader):
         data = data.to(device)
-        labels = labels.to(device)
+        # clear the gradients of all optimized variables
         optimizer.zero_grad()
-        # reshape the image into a vector
+        # reshape binary mask to add batch_size dimension
+        binary_mask = binary_mask.unsqueeze(0).expand(batch_size, -1, -1)
         # model forward
-        x_hat, mu, logvar = inpaint(data, masks)
+        x_hat, mu, logvar = inpaint(data, binary_mask)
         # compute the loss
-        loss = inpaint.loss_function(x_hat, data, masks, alpha)
+        loss = inpaint.loss_function(x_hat, data, binary_mask, alpha)
         # model backward
         loss.backward()
         # update the model paramters
         optimizer.step()
-
+        # update running training loss
         train_loss += loss
-    train_loss = train_loss/len(loader_train)
+    train_loss = train_loss/len(image_loader)
     print('Epoch: {} \tTraining Loss: {:.6f}'.format(epoch, train_loss))

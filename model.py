@@ -30,17 +30,23 @@ class FreeFormImageInpaint(nn.module):
     
     def forward(self, x, masks):
         """
-        dim of x: batch_size x channels x 256 x 256
+        dim of x: batch_size x 256 x 256 x channels
+        dim of mask: batch_size x 256 x 256
         """
-        
+
         # TODO: normalize images and pair images with corresponding masks as input
         # input will contain masked images
-        input = masked_images
+        x = x.permute(0, 3, 1, 2) # batch_size x channels x 256 x 256
+        masks = masks.unsqueeze(1) # batch_size x 1 x 256 x 256
+        masked_imgs = x * (1 - x) 
+        input = torch.cat([masked_imgs, masks], dim=1) # batch_size x (channels + 1) x 256 x 256
         
         # coarse network
         coarse_out = self.coarse_network(input)
         # clip output so values are between -1 and 1
         coarse_clip = torch.clamp(coarse_out, -1, 1)
+        
+        return coarse_clip
 
     def loss_function(self, x_hat, x, masks, alpha):
         # TODO: convert x/x_hat to just masked and unmasked portion
