@@ -32,7 +32,7 @@ for epoch in range(n_epochs):
         # reshape binary mask to add batch_size dimension
         binary_mask = binary_mask.unsqueeze(0).expand(batch_size, -1, -1)
         # model forward
-        x_hat, mu, logvar = inpaint(data, binary_mask)
+        x_hat = inpaint(data, binary_mask)
         # compute the loss
         loss = inpaint.loss_function(x_hat, data, binary_mask, alpha)
         # model backward
