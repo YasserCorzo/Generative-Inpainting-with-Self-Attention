@@ -3,7 +3,7 @@ import torch.nn as nn
 
 from layers import GatedConv, ResizeGatedConv
 
-class FreeFormImageInpaint(nn.module):
+class FreeFormImageInpaint(nn.Module):
     def __init__(self, in_channels):
         super(FreeFormImageInpaint, self).__init__()
         
@@ -33,7 +33,8 @@ class FreeFormImageInpaint(nn.module):
         dim of x: batch_size x 256 x 256 x channels
         dim of mask: batch_size x 256 x 256
         """
-
+        print("shape of images (B x H x W x C):", x.shape)
+        print("shape of masks (B x H x W):", masks.shape)
         # TODO: normalize images and pair images with corresponding masks as input
         # input will contain masked images
         x = x.permute(0, 3, 1, 2) # batch_size x channels x 256 x 256
@@ -61,6 +62,6 @@ class FreeFormImageInpaint(nn.module):
         mask_bit_ratio = torch.mean(masks, -1) #take the ratio of masked to unmasked bits
         bit_mask_ratio = torch.mean(1 - masks, -1) #take the ratio of unmasked to masked bits
         masked_loss = alpha * torch.mean(torch.abs(masked - masked_hat) / mask_bit_ratio)
-        unmasked_loss = alpha * torch.mean(torch.abs(unmasked - unmasked_hat) / mask_bit_ratio)
+        unmasked_loss = alpha * torch.mean(torch.abs(unmasked - unmasked_hat) / bit_mask_ratio)
         loss = masked_loss + unmasked_loss
         return loss

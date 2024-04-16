@@ -23,6 +23,8 @@ def get_mask(image_size, square_size):
     start = (image_size[0] - square_size) // 2
     end = start + square_size
     mask[start:end, start:end] = 1
+    mask = np.asarray(mask, np.float32)
+    mask = torch.from_numpy(mask)
     return mask
 
 

@@ -4,11 +4,11 @@ import torch.nn.functional as F
 
 
 class GatedConv(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1, feature_act = nn.ReLU()):
+    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1, padding_mode: str = 'zeros', feature_act = nn.LeakyReLU(0.2)):
         super(GatedConv, self).__init__()
         
-        self.gating = nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding, dilation)
-        self.feature = nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding, dilation)
+        self.gating = nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding, dilation, padding_mode=padding_mode)
+        self.feature = nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding, dilation, padding_mode=padding_mode)
         
         # normalizes inputs, improves the generalization ability of the model
         self.batch_norm = nn.BatchNorm2d(num_features=out_channels)
@@ -30,10 +30,10 @@ class GatedConv(nn.Module):
         
 
 class ResizeGatedConv(nn.Module):
-    def __init__(self, in_channels, out_channels, scale_factor = 2):
+    def __init__(self, in_channels, out_channels, stride=1, padding=0, scale_factor = 2):
         super(ResizeGatedConv, self).__init__()
         
-        self.gated_conv = GatedConv(in_channels, out_channels, kernel_size=3, stride=1)
+        self.gated_conv = GatedConv(in_channels, out_channels, kernel_size=3, stride=stride, padding=padding)
         self.scale_factor = scale_factor
         
     def forward(self, x):
