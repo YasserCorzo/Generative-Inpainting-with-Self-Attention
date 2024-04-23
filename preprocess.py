@@ -80,13 +80,13 @@ def get_masked_images(image_loader, binary_mask):
 
     return masked_images
 
-'''
+
 batch_size = 2
-image_loader = get_images(batch_size)
+train_loader, val_loader = get_images(batch_size)
 
 image_size = (256, 256)
-square_size = 100
+square_size = 30
 binary_mask = get_mask(image_size, square_size)
 
-get_masked_images(image_loader, binary_mask)
-'''
+get_masked_images(train_loader, binary_mask)
+
