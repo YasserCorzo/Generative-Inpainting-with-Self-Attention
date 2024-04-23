@@ -5,15 +5,28 @@ import torch
 import torchvision
 from torchvision import transforms
 
+# Custom transformation to convert single-channel images to RGB
+class ConvertToRGB(object):
+    def __call__(self, img):
+        img_np = np.array(img)
+        if len(img_np.shape) == 2:  # Check if the image has only one channel
+            img = img.convert('RGB')  # Convert to RGB
+        return img
+
+def collate_fn(batch):
+   batch = list(filter(lambda x: x is not None, batch))
+   return torch.utils.data.dataloader.default_collate(batch) 
 
 def get_images(batch_size):
     transform = transforms.Compose([
-        transforms.Resize((256, 256)), 
+        ConvertToRGB(), 
+        transforms.Resize((256, 256)),
         transforms.ToTensor()
     ])
 
-    cifar10_train = torchvision.datasets.CIFAR10(root='./data', train=True, download=True, transform=transform)
-    data_loader = torch.utils.data.DataLoader(cifar10_train, batch_size=batch_size, shuffle=True)
+    #cifar10_train = torchvision.datasets.CIFAR10(root='./data', train=True, download=True, transform=transform)
+    caltech256 = torchvision.datasets.Caltech256(root='./data', download=True, transform=transform)
+    data_loader = torch.utils.data.DataLoader(caltech256, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
 
     return data_loader
 
@@ -64,7 +77,7 @@ def get_masked_images(image_loader, binary_mask):
 
     return masked_images
 
-
+'''
 batch_size = 2
 image_loader = get_images(batch_size)
 
@@ -73,4 +86,4 @@ square_size = 100
 binary_mask = get_mask(image_size, square_size)
 
 get_masked_images(image_loader, binary_mask)
-
+'''
