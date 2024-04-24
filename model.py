@@ -30,7 +30,7 @@ class FreeFormImageInpaint(nn.Module):
     
     def forward(self, x, masks):
         """
-        dim of x: batch_size x 256 x 256 x channels
+        dim of x: batch_size x channels x 256 x 256
         dim of mask: batch_size x 256 x 256
         """
         #print("shape of images (B x C x H x W):", x.shape)
@@ -39,7 +39,7 @@ class FreeFormImageInpaint(nn.Module):
         # input will contain masked images
         #x = x.permute(0, 3, 1, 2) # batch_size x channels x 256 x 256
         masks = masks.unsqueeze(1) # batch_size x 1 x 256 x 256
-        masked_imgs = x * (1 - masks)
+        masked_imgs = (x * (1 - masks)) + masks
         #print(masks.shape)
         #print(masked_imgs.shape)
         input = torch.cat([masked_imgs, masks], dim=1) # batch_size x (channels + 1) x 256 x 256
