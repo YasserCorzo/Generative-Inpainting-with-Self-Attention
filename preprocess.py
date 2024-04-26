@@ -5,17 +5,38 @@ import torch
 import torchvision
 from torchvision import transforms
 
+# Custom transformation to convert single-channel images to RGB
+class ConvertToRGB(object):
+    def __call__(self, img):
+        img_np = np.array(img)
+        if len(img_np.shape) == 2:  # Check if the image has only one channel
+            img = img.convert('RGB')  # Convert to RGB
+        return img
+
+def collate_fn(batch):
+   batch = list(filter(lambda x: x is not None, batch))
+   return torch.utils.data.dataloader.default_collate(batch) 
 
 def get_images(batch_size):
     transform = transforms.Compose([
-        transforms.Resize((256, 256)), 
+        ConvertToRGB(), 
+        transforms.Resize((32, 32)),
         transforms.ToTensor()
     ])
 
-    cifar10_train = torchvision.datasets.CIFAR10(root='./data', train=True, download=True, transform=transform)
-    data_loader = torch.utils.data.DataLoader(cifar10_train, batch_size=batch_size, shuffle=True)
-
-    return data_loader
+    cifar10 = torchvision.datasets.CIFAR10(root='./data', train=True, download=True, transform=transform)
+    train_size = int(0.6 * len(cifar10))
+    val_size = len(cifar10) - train_size
+    train_set, val_set = torch.utils.data.random_split(cifar10, [train_size, val_size])
+    '''
+    caltech256 = torchvision.datasets.Caltech256(root='./data', download=True, transform=transform)
+    train_size = int(0.6 * len(caltech256))
+    val_size = len(caltech256) - train_size
+    train_set, val_set = torch.utils.data.random_split(caltech256, [train_size, val_size])
+    '''
+    train_loader = torch.utils.data.DataLoader(train_set, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
+    val_loader = torch.utils.data.DataLoader(val_set, batch_size=batch_size, shuffle=False, collate_fn=collate_fn)
+    return train_loader, val_loader
 
 
 def get_mask(image_size, square_size):
@@ -64,13 +85,13 @@ def get_masked_images(image_loader, binary_mask):
 
     return masked_images
 
-
+'''
 batch_size = 2
-image_loader = get_images(batch_size)
+train_loader, val_loader = get_images(batch_size)
 
 image_size = (256, 256)
-square_size = 100
+square_size = 30
 binary_mask = get_mask(image_size, square_size)
 
-get_masked_images(image_loader, binary_mask)
-
+get_masked_images(train_loader, binary_mask)
+'''
