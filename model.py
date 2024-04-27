@@ -1,70 +1,41 @@
 import torch
 import torch.nn as nn
 
-from layers import GatedConv, ResizeGatedConv, Convolution
+from layers import GatedConv, ResizeGatedConv, SpectralNormConv, Convolution
 
-class GlobalWGAN(nn.Module):
-    def __init__(self, in_channels):
-        super(GlobalWGAN, self).__init__()
-        self.conv_layers = nn.Sequential(
-            Convolution(in_channels, out_channels=64, kernel_size=5, stride=2, padding=2), # batch_size x 64 x 128 x 128
-            Convolution(in_channels=64, out_channels=128, kernel_size=5, stride=2, padding=2), # batch_size x 128 x 64 x 64
-            Convolution(in_channels=128, out_channels=256, kernel_size=5, stride=2, padding=2), # batch_size x 256 x 32 x 32
-            Convolution(in_channels=256, out_channels=256, kernel_size=5, stride=2, padding=2), # batch_size x 256 x 16 x 16
-            nn.Flatten(),                                                                       # batch_size x 256 * 16 * 16
-            nn.Linear(in_features=256*16*16, out_features=1) # batch_size x 1
-        )
-    
-    def forward(self, x):
-        """
-        dim of x: batch_size x C x H x W 
-        """
-        x = self.conv_layers(x)
-        return x
-
-class LocalWGAN(nn.Module):
-    def __init__(self, in_channels):
-        super(LocalWGAN, self).__init__()
-
-        self.conv_layers = nn.Sequential(
-            Convolution(in_channels, out_channels=64, kernel_size=5, stride=2, padding=2), # batch_size x 64 x 128 x 128
-            Convolution(in_channels=64, out_channels=128, kernel_size=5, stride=2, padding=2), # batch_size x 128 x 64 x 64
-            Convolution(in_channels=128, out_channels=256, kernel_size=5, stride=2, padding=2), # batch_size x 256 x 32 x 32
-            Convolution(in_channels=256, out_channels=512, kernel_size=5, stride=2, padding=2), # batch_size x 512 x 16 x 16
-            nn.Flatten(),                                                                       # batch_size x 512 * 16 * 16
-            nn.Linear(in_features=512*16*16, out_features=1) # batch_size x 1
-        )
-
-    def forward(self, x):
-        """
-        dim of x: batch_size x C x H//2 x W//2 
-        """
-        x = self.conv_layers(x)
-        return x
 
 class Discriminator(nn.Module):
     def __init__(self, in_channels):
         super(Discriminator, self).__init__()
 
-        self.local_critic = LocalWGAN(in_channels)
-        self.global_critic = GlobalWGAN(in_channels)
+        self.layers = nn.Sequential(
+            SpectralNormConv(in_channels, out_channels=64, kernel_size=5, stride=2, padding=2), # batch_size x 4 x 256 x 256 ---> batch_size x 64 x 128 x 128
+            SpectralNormConv(in_channels=64, out_channels=128, kernel_size=5, stride=2, padding=2), # batch_size x 128 x 64 x 64
+            SpectralNormConv(in_channels=128, out_channels=256, kernel_size=5, stride=2, padding=2), # batch_size x 256 x 32 x 32
+            SpectralNormConv(in_channels=256, out_channels=256, kernel_size=5, stride=2, padding=2), # batch_size x 256 x 16 x 16
+            SpectralNormConv(in_channels=256, out_channels=256, kernel_size=5, stride=2, padding=2), # batch_size x 256 x 8 x 8
+            SpectralNormConv(in_channels=256, out_channels=256, kernel_size=5, stride=2, padding=2), # batch_size x 256 x 4 x 4
+            nn.Flatten() # 1 x 4096
+        )
 
-    def forward(self, x, x_patch):
+    def forward(self, x, masks):
         """
         dim of x: batch_size x channels x H x W
-        dim of x_patch: batch_size x channels x H//2 x W//2
+        dim of masks: batch_size x H x W
         """
-        global_wgan_out = self.global_critic(x)
-        local_wgan_out = self.local_critic(x_patch)
-
-        return local_wgan_out, global_wgan_out
-
+        masks = masks.unsqueeze(1) # batch_size x 1 x 256 x 256
+        input = torch.cat([x, masks], dim=1) # batch_size x (channels + 1) x 256 x 256
+        out = self.layers(input) 
+        return out
+    
     #Discriminator Loss
     def loss_function(self, x_hat, x):
         '''
         dim of x_hat & x: batch_size x 3 x 256 x 256
         '''
         return torch.mean(nn.functional.relu(1 - x)) + torch.mean(nn.functional.relu(1 + x_hat))
+        
+        
 
 class FreeFormImageInpaint(nn.Module):
     def __init__(self, in_channels):
@@ -198,7 +169,7 @@ class SelfAttention(nn.Module):
         
         #multiplying attention and value to get output
         attention_value = torch.bmm(value, attention)
-        attention_value = att_value.view(batch_size, self.inter_channels, height, width)
+        attention_value = attention_value.view(batch_size, self.inter_channels, height, width)
 
         #final conv layer
         output = self.conv_final(attention_value)

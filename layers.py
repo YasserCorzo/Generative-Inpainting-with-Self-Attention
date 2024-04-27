@@ -53,3 +53,18 @@ class Convolution(nn.Module):
         if self.activation_func:
             x = self.activation_func(x)
         return x
+    
+
+class SpectralNormConv(nn.Module):
+    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1):
+        super(SpectralNormConv, self).__init__()
+
+        self.spect_norm_conv = nn.utils.spectral_norm(
+                                    nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding, dilation)
+                                )
+        self.act_func = nn.LeakyReLU(negative_slope=0.2)
+
+    def forward(self, x):
+        x = self.spect_norm_conv(x)
+        x = self.act_func(x)
+        return x
