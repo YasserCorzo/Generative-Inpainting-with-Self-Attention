@@ -35,8 +35,6 @@ class Discriminator(nn.Module):
         '''
         return torch.mean(nn.functional.relu(1 - x)) + torch.mean(nn.functional.relu(1 + x_hat))
         
-        
-
 class FreeFormImageInpaint(nn.Module):
     def __init__(self, in_channels):
         super(FreeFormImageInpaint, self).__init__()
