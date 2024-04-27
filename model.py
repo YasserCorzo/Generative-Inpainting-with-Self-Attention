@@ -60,22 +60,25 @@ class FreeFormImageInpaint(nn.Module):
         )
 
         self.refinement_network = nn.Sequential(
-            GatedConv(in_channels, out_channels=32, kernel_size=5, stride=1, padding=2), 
-            GatedConv(in_channels=2, out_channels=32, kernel_size=3, stride=2, padding=1), 
-            GatedConv(in_channels=32, out_channels=64, kernel_size=3, stride=1, padding=1), 
-            GatedConv(in_channels=64, out_channels=128, kernel_size=3, stride=2, padding=1), 
-            GatedConv(in_channels=128, out_channels=128, kernel_size=3, stride=1, padding=1), 
-            GatedConv(in_channels=128, out_channels=128, kernel_size=3, stride=1, padding=1), 
-            SelfAttention(in_channels=128), 
-            GatedConv(in_channels=128, out_channels=128, kernel_size=3, stride=1, padding=1), 
-            GatedConv(in_channels=128, out_channels=128, kernel_size=3, stride=1, padding=1), 
-            GatedConv(in_channels=128, out_channels=128, kernel_size=3, stride=1, padding=1), 
-            GatedConv(in_channels=128, out_channels=128, kernel_size=3, stride=1, padding=1), 
-            ResizeGatedConv(in_channels=128, out_channels=64, kernel_size=3, stride=1, padding=1), 
-            GatedConv(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1), 
-            ResizeGatedConv(in_channels=64, out_channels=32, kernel_size=3, stride=1, padding=1), 
-            GatedConv(in_channels=32, out_channels=16, kernel_size=3, stride=1, padding=1), 
-            GatedConv(in_channels=16, out_channels=3, kernel_size=3, stride=1, padding=1, feature_act=None)
+            GatedConv(in_channels, out_channels=32, kernel_size=5, stride=1, padding=2), # batch_size x 32 x 256 x 256
+            GatedConv(in_channels=32, out_channels=32, kernel_size=3, stride=2, padding=1), # batch_size x 32 x 128 x 128
+            GatedConv(in_channels=32, out_channels=64, kernel_size=3, stride=1, padding=1), # batch_size x 64 x 128 x 128
+            GatedConv(in_channels=64, out_channels=128, kernel_size=3, stride=2, padding=1), # batch_size x 128 x 64 x 64
+            GatedConv(in_channels=128, out_channels=128, kernel_size=3, stride=1, padding=1), # batch_size x 128 x 64 x 64
+            GatedConv(in_channels=128, out_channels=128, kernel_size=3, stride=1, padding=1), # batch_size x 128 x 64 x 64
+
+            SelfAttention(in_channels=128),   # need to check this layer                      # batch_size x 128 x 64 x 64
+
+            GatedConv(in_channels=128, out_channels=128, kernel_size=3, stride=1, padding=1), # batch_size x 128 x 64 x 64
+            GatedConv(in_channels=128, out_channels=128, kernel_size=3, stride=1, padding=1), # batch_size x 128 x 64 x 64
+
+            GatedConv(in_channels=128, out_channels=128, kernel_size=3, stride=1, padding=1), # batch_size x 128 x 64 x 64
+            GatedConv(in_channels=128, out_channels=128, kernel_size=3, stride=1, padding=1), # batch_size x 128 x 64 x 64
+            ResizeGatedConv(in_channels=128, out_channels=64, kernel_size=3, stride=1, padding=1), # batch_size x 64 x 128 x 128
+            GatedConv(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1), # batch_size x 64 x 128 x 128
+            ResizeGatedConv(in_channels=64, out_channels=32, kernel_size=3, stride=1, padding=1), # batch_size x 32 x 256 x 256
+            GatedConv(in_channels=32, out_channels=16, kernel_size=3, stride=1, padding=1), # batch_size x 16 x 256 x 256
+            GatedConv(in_channels=16, out_channels=3, kernel_size=3, stride=1, padding=1, feature_act=None)  # batch_size x 3 x 256 x 256
         )
 
         self.discrimininator = Discriminator()
