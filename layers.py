@@ -39,3 +39,17 @@ class ResizeGatedConv(nn.Module):
     def forward(self, x):
         x = F.interpolate(x, scale_factor=self.scale_factor)
         return self.gated_conv(x)
+    
+
+class Convolution(nn.Module):
+    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1, act_func=nn.LeakyReLU(0.2)):
+        super(Convolution, self).__init__()
+
+        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding, dilation)
+        self.activation_func = act_func
+
+    def forward(self, x):
+        x = self.conv(x)
+        if self.activation_func:
+            x = self.activation_func(x)
+        return x
