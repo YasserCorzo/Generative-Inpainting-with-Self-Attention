@@ -58,7 +58,13 @@ class Discriminator(nn.Module):
         local_wgan_out = self.local_critic(x_patch)
 
         return local_wgan_out, global_wgan_out
-        
+
+    #Discriminator Loss
+    def loss_function(self, x_hat, x):
+        '''
+        dim of x_hat & x: batch_size x 3 x 256 x 256
+        '''
+        return torch.mean(nn.functional.relu(1 - x)) + torch.mean(nn.functional.relu(1 + x_hat))
 
 class FreeFormImageInpaint(nn.Module):
     def __init__(self, in_channels):
