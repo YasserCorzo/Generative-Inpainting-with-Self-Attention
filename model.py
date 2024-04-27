@@ -139,3 +139,63 @@ class FreeFormImageInpaint(nn.Module):
         unmasked_loss = alpha * torch.mean(torch.abs(unmasked - unmasked_hat) / bit_mask_ratio)
         loss = masked_loss + unmasked_loss
         return loss
+
+class SelfAttention(nn.Module):
+
+    def __init__(self, in_channels: int = 3,
+                       inter_channels: int = None):
+
+        super(SelfAttention, self).__init__()
+        if inter_channels is None:
+            inter_channels = in_channels // 8
+        self.in_channels = in_channels
+        self.inter_channels = inter_channels
+        self.gamma = nn.Parameter(torch.zeros(1))
+
+        self.conv_key = nn.Conv2d(in_channels=in_channels,
+                                  out_channels=inter_channels,
+                                  kernel_size=1)
+
+        self.conv_query = nn.Conv2d(in_channels=in_channels,
+                                    out_channels=inter_channels,
+                                    kernel_size=1)
+
+        self.conv_value = nn.Conv2d(in_channels=in_channels,
+                                    out_channels=inter_channels,
+                                    kernel_size=1)
+
+        self.conv_final = nn.Conv2d(in_channels=inter_channels,
+                                    out_channels=in_channels,
+                                    kernel_size=1)
+
+    def forward(self, x: torch.Tensor):
+        batch_size = x.shape[0]
+        channels = x.shape[1]
+        height = x.shape[2]
+        width = x.shape[3]
+
+        #key, query, value compute
+        key = self.conv_key(x)
+        query = self.conv_query(x)
+        value = self.conv_value(x)
+
+        #resizing
+        key = key.view(batch_size, self.inter_channels, height * width)
+        query = query.view(batch_size, self.inter_channels, height * width)
+        value = value.view(batch_size, self.inter_channels, height * width)
+        query = query.permute(0, 2, 1)
+
+        #get attention scores
+        attention = torch.bmm(query, key)
+        #normalize attention score with softmax
+        attention = torch.softmax(attention, dim=1)
+        
+        #multiplying attention and value to get output
+        attention_value = torch.bmm(value, attention)
+        attention_value = att_value.view(batch_size, self.inter_channels, height, width)
+
+        #final conv layer
+        output = self.conv_final(attention_value)
+        output = self.gamma * output + x
+
+        return output, attention
