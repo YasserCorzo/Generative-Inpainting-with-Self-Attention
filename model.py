@@ -205,3 +205,11 @@ class SelfAttention(nn.Module):
         output = self.gamma * output + x
 
         return output, attention
+
+##### For Generator Loss
+    #Generator Loss
+    def loss_function(self, x_hat):
+        '''
+        dim of x_hat: batch_size x 3 x 256 x 256
+        '''
+        return -1 * torch.mean(x_hat)
