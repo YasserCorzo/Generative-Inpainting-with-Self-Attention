@@ -34,8 +34,7 @@ class Discriminator(nn.Module):
         dim of x_hat & x: batch_size x 3 x 256 x 256
         '''
         return torch.mean(nn.functional.relu(1 - x)) + torch.mean(nn.functional.relu(1 + x_hat))
-        
-        
+
 
 class Generator(nn.Module):
     def __init__(self, in_channels):
@@ -76,9 +75,9 @@ class Generator(nn.Module):
 
             GatedConv(in_channels=128, out_channels=128, kernel_size=3, stride=1, padding=1), # batch_size x 128 x 64 x 64
             GatedConv(in_channels=128, out_channels=128, kernel_size=3, stride=1, padding=1), # batch_size x 128 x 64 x 64
-            ResizeGatedConv(in_channels=128, out_channels=64, kernel_size=3, stride=1, padding=1), # batch_size x 64 x 128 x 128
+            ResizeGatedConv(in_channels=128, out_channels=64, stride=1, padding=1), # batch_size x 64 x 128 x 128
             GatedConv(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1), # batch_size x 64 x 128 x 128
-            ResizeGatedConv(in_channels=64, out_channels=32, kernel_size=3, stride=1, padding=1), # batch_size x 32 x 256 x 256
+            ResizeGatedConv(in_channels=64, out_channels=32, stride=1, padding=1), # batch_size x 32 x 256 x 256
             GatedConv(in_channels=32, out_channels=16, kernel_size=3, stride=1, padding=1), # batch_size x 16 x 256 x 256
             GatedConv(in_channels=16, out_channels=3, kernel_size=3, stride=1, padding=1, feature_act=None)  # batch_size x 3 x 256 x 256
         )
@@ -94,7 +93,7 @@ class Generator(nn.Module):
         # input will contain masked images
         #x = x.permute(0, 3, 1, 2) # batch_size x channels x 256 x 256
         masks = masks.unsqueeze(1) # batch_size x 1 x 256 x 256
-        masked_imgs = (x * (1 - masks)) + masks
+        masked_imgs = x * (1 - masks)
         #print(masks.shape)
         #print(masked_imgs.shape)
         input = torch.cat([masked_imgs, masks], dim=1) # batch_size x (channels + 1) x 256 x 256
@@ -108,6 +107,8 @@ class Generator(nn.Module):
         # return clipped output of coarse network
         # return coarse_clip
 
+        coarse_raw = coarse_clip
+
         # process coarse network output for refinement network input
         coarse_processed = coarse_clip * masks + masked_imgs
 
@@ -116,11 +117,12 @@ class Generator(nn.Module):
         refine_out = self.refinement_network(refine_in)
         refine_clip = torch.clamp(refine_out, -1, 1)
 
+        refine_raw = refine_clip
+
         # merge original image with refinement
         reconstructed_image = refine_clip * masks + x * (1 - masks)
 
-        return reconstructed_image
-    
+        return reconstructed_image, coarse_raw, refine_raw
     
     def recon_loss_function(self, x_hat, x, masks, alpha):
         '''
@@ -146,12 +148,23 @@ class Generator(nn.Module):
         unmasked_loss = alpha * torch.mean(torch.abs(unmasked - unmasked_hat) / bit_mask_ratio)
         loss = masked_loss + unmasked_loss
         return loss
+
+    def combined_rec_loss_function(self, x, x_coarse, x_refinement, masks, alpha):
+        '''
+        dim of x & x_coarse & x_refinement: batch_size x channel x H x W
+        dim of masks: batch_size x H x W 
+        '''
+        coarse_recon = self.recon_loss_function(x_coarse, x, masks, alpha)
+        refinement_recon = self.recon_loss_function(x_refinement, x, masks, alpha)
+
+        return coarse_recon + refinement_recon
     
     def generator_loss_function(self, x_hat):
         '''
         dim of x_hat & x: batch_size x 3 x H x W
         '''
         return (-1) * torch.mean(x_hat)
+
 
 class SelfAttention(nn.Module):
 
@@ -212,3 +225,4 @@ class SelfAttention(nn.Module):
         output = self.gamma * output + x
 
         return output, attention
+
