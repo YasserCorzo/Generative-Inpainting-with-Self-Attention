@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from layers import GatedConv, ResizeGatedConv, SpectralNormConv, Convolution
+from layers import GatedConv, ResizeGatedConv, SpectralNormConv
 
 
 class Discriminator(nn.Module):
@@ -35,9 +35,11 @@ class Discriminator(nn.Module):
         '''
         return torch.mean(nn.functional.relu(1 - x)) + torch.mean(nn.functional.relu(1 + x_hat))
         
-class FreeFormImageInpaint(nn.Module):
+        
+
+class Generator(nn.Module):
     def __init__(self, in_channels):
-        super(FreeFormImageInpaint, self).__init__()
+        super(Generator, self).__init__()
 
         self.coarse_network = nn.Sequential(
             GatedConv(in_channels, out_channels=32, kernel_size=5, stride=1, padding=2), # batch_size x 32 x 256 x 256
@@ -80,8 +82,6 @@ class FreeFormImageInpaint(nn.Module):
             GatedConv(in_channels=32, out_channels=16, kernel_size=3, stride=1, padding=1), # batch_size x 16 x 256 x 256
             GatedConv(in_channels=16, out_channels=3, kernel_size=3, stride=1, padding=1, feature_act=None)  # batch_size x 3 x 256 x 256
         )
-
-        self.discrimininator = Discriminator()
     
     def forward(self, x, masks):
         """
@@ -122,17 +122,14 @@ class FreeFormImageInpaint(nn.Module):
         return reconstructed_image
     
     
-    def loss_function(self, x_hat, x, masks, alpha):
+    def recon_loss_function(self, x_hat, x, masks, alpha):
         '''
         dim of x_hat & x: batch_size x 3 x H x W
         dim of masks: batch_size x H x W
         '''
 
         # TODO: convert x/x_hat to just masked and unmasked portion
-        #print("shape of x:", x.shape)
-        #print("shape of xhat:", x_hat.shape)
         masks = masks.unsqueeze(1) # batch_size x 1 x 256 x 256
-        #print("shape of masks:", masks.shape)
         unmasked = x * masks
         unmasked_hat = x_hat * masks
         masked = x * (1 - masks)
@@ -141,7 +138,7 @@ class FreeFormImageInpaint(nn.Module):
         mask_bit_ratio = torch.mean(torch.mean(masks, -1), -1) #take the ratio of masked to unmasked bits
         mask_bit_ratio = mask_bit_ratio.unsqueeze(-1)
         mask_bit_ratio = mask_bit_ratio.unsqueeze(-1)
-        #print(mask_bit_ratio.shape)
+
         bit_mask_ratio = torch.mean(torch.mean(1-masks, -1), -1) #take the ratio of unmasked to masked bits
         bit_mask_ratio = bit_mask_ratio.unsqueeze(-1)
         bit_mask_ratio = bit_mask_ratio.unsqueeze(-1)
@@ -149,6 +146,12 @@ class FreeFormImageInpaint(nn.Module):
         unmasked_loss = alpha * torch.mean(torch.abs(unmasked - unmasked_hat) / bit_mask_ratio)
         loss = masked_loss + unmasked_loss
         return loss
+    
+    def generator_loss_function(self, x_hat):
+        '''
+        dim of x_hat & x: batch_size x 3 x H x W
+        '''
+        return (-1) * torch.mean(x_hat)
 
 class SelfAttention(nn.Module):
 
@@ -209,11 +212,3 @@ class SelfAttention(nn.Module):
         output = self.gamma * output + x
 
         return output, attention
-
-##### For Generator Loss
-    #Generator Loss
-    def loss_function(self, x_hat):
-        '''
-        dim of x_hat: batch_size x 3 x 256 x 256
-        '''
-        return -1 * torch.mean(x_hat)
