@@ -105,7 +105,22 @@ class FreeFormImageInpaint(nn.Module):
         # clip output so values are between -1 and 1
         coarse_clip = torch.clamp(coarse_out, -1, 1)
 
-        return coarse_clip
+        # return clipped output of coarse network
+        # return coarse_clip
+
+        # process coarse network output for refinement network input
+        coarse_processed = coarse_clip * masks + masked_imgs
+
+        # refinement network
+        refine_in = torch.cat([coarse_processed, masks], dim=1)
+        refine_out = self.refinement_network(refine_in)
+        refine_clip = torch.clamp(refine_out, -1, 1)
+
+        # merge original image with refinement
+        reconstructed_image = refine_clip * masks + x * (1 - masks)
+
+        return reconstructed_image
+    
     
     def loss_function(self, x_hat, x, masks, alpha):
         '''
