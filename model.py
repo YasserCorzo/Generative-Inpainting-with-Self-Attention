@@ -159,7 +159,7 @@ class Generator(nn.Module):
 
         return coarse_recon + refinement_recon
     
-    def generator_loss_function(self, x_hat):
+    def loss_function(self, x_hat):
         '''
         dim of x_hat & x: batch_size x 3 x H x W
         '''
