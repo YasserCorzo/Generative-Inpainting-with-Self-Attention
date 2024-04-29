@@ -94,7 +94,7 @@ class Generator(nn.Module):
         # input will contain masked images
         #x = x.permute(0, 3, 1, 2) # batch_size x channels x 256 x 256
         masks = masks.unsqueeze(1) # batch_size x 1 x 256 x 256
-        normalized_x = model.utils.normalize_tensor(images,
+        normalized_x = model.utils.normalize_tensor(x,
                                     smin=0, smax=255, tmin=-1, tmax=1)
         masked_imgs = normalized_x * (1 - masks)
         #print(masks.shape)
