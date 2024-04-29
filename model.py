@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import model.utils
 
 from layers import GatedConv, ResizeGatedConv, SpectralNormConv
 
@@ -93,7 +94,9 @@ class Generator(nn.Module):
         # input will contain masked images
         #x = x.permute(0, 3, 1, 2) # batch_size x channels x 256 x 256
         masks = masks.unsqueeze(1) # batch_size x 1 x 256 x 256
-        masked_imgs = x * (1 - masks)
+        normalized_x = model.utils.normalize_tensor(images,
+                                    smin=0, smax=255, tmin=-1, tmax=1)
+        masked_imgs = normalized_x * (1 - masks)
         #print(masks.shape)
         #print(masked_imgs.shape)
         input = torch.cat([masked_imgs, masks], dim=1) # batch_size x (channels + 1) x 256 x 256
