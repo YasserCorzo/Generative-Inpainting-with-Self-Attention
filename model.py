@@ -256,7 +256,8 @@ class SelfAttention(nn.Module):
         self.value_conv = nn.Conv2d(in_channels = in_dim , out_channels = in_dim , kernel_size= 1)
         self.gamma = nn.Parameter(torch.zeros(1))
 
-        self.softmax  = nn.Softmax(dim=-1) #
+        self.softmax = nn.Softmax(dim=-1)
+
     def forward(self,x):
         """
             inputs :
@@ -277,7 +278,7 @@ class SelfAttention(nn.Module):
 
         out = self.gamma*out + x
         if self.with_attn:
-            return out ,attention
+            return out, attention
         else:
             return out
 
