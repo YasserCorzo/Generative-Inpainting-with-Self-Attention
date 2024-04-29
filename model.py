@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-import model.utils
 
 from layers import GatedConv, ResizeGatedConv, SpectralNormConv
 
@@ -36,7 +35,18 @@ class Discriminator(nn.Module):
         '''
         return torch.mean(nn.functional.relu(1 - x)) + torch.mean(nn.functional.relu(1 + x_hat))
 
+def normalize_tensor(data: torch.Tensor,
+                     smin: float,
+                     smax: float,
+                     tmin : float,
+                     tmax : float) -> torch.Tensor:
 
+    slength = smax - smin
+    tlength = tmax - tmin
+    data = (data - smin) / slength
+    data = (data * tlength) + tmin
+    return data
+                        
 class Generator(nn.Module):
     def __init__(self):
         super(Generator, self).__init__()
@@ -94,8 +104,7 @@ class Generator(nn.Module):
         # input will contain masked images
         #x = x.permute(0, 3, 1, 2) # batch_size x channels x 256 x 256
         masks = masks.unsqueeze(1) # batch_size x 1 x 256 x 256
-        normalized_x = model.utils.normalize_tensor(x,
-                                    smin=0, smax=255, tmin=-1, tmax=1)
+        normalized_x = normalize_tensor(x, smin=0, smax=255, tmin=-1, tmax=1)
         masked_imgs = normalized_x * (1 - masks)
         #print(masks.shape)
         #print(masked_imgs.shape)
