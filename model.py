@@ -29,7 +29,7 @@ class Discriminator(nn.Module):
         return out
     
     #Discriminator Loss
-    def loss_function(self, x_hat, x):
+    def loss_function(self, x, x_hat):
         '''
         dim of x_hat & x: batch_size x 3 x 256 x 256
         '''
