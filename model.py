@@ -4,6 +4,18 @@ import torch.nn as nn
 from layers import GatedConv, ResizeGatedConv, SpectralNormConv
 
 
+def normalize_tensor(data: torch.Tensor,
+                     smin: float,
+                     smax: float,
+                     tmin : float,
+                     tmax : float) -> torch.Tensor:
+
+    slength = smax - smin
+    tlength = tmax - tmin
+    data = (data - smin) / slength
+    data = (data * tlength) + tmin
+    return data
+
 class Discriminator(nn.Module):
     def __init__(self):
         super(Discriminator, self).__init__()
@@ -23,6 +35,7 @@ class Discriminator(nn.Module):
         dim of x: batch_size x channels x H x W
         dim of masks: batch_size x H x W
         """
+        x = normalize_tensor(x, 0, 255, -1, 1)
         masks = masks.unsqueeze(1) # batch_size x 1 x 256 x 256
         input = torch.cat([x, masks], dim=1) # batch_size x (channels + 1) x 256 x 256
         out = self.layers(input) 
@@ -34,18 +47,6 @@ class Discriminator(nn.Module):
         dim of x_hat & x: batch_size x 3 x 256 x 256
         '''
         return torch.mean(nn.functional.relu(1 - x)) + torch.mean(nn.functional.relu(1 + x_hat))
-
-def normalize_tensor(data: torch.Tensor,
-                     smin: float,
-                     smax: float,
-                     tmin : float,
-                     tmax : float) -> torch.Tensor:
-
-    slength = smax - smin
-    tlength = tmax - tmin
-    data = (data - smin) / slength
-    data = (data * tlength) + tmin
-    return data
                         
 class Generator(nn.Module):
     def __init__(self):
@@ -122,8 +123,8 @@ class Generator(nn.Module):
         coarse_raw = coarse_clip
 
         # process coarse network output for refinement network input
-        coarse_processed = coarse_clip * masks + masked_imgs
-
+        coarse_processed = masked_imgs + coarse_clip * masks
+    
         # refinement network
         refine_in = torch.cat([coarse_processed, masks], dim=1)
         refine_out = self.refinement_network(refine_in)
@@ -132,7 +133,7 @@ class Generator(nn.Module):
         refine_raw = refine_clip
         
         # merge original image with refinement
-        reconstructed_image = refine_clip * masks + x * (1 - masks)
+        reconstructed_image = refine_clip * masks + normalized_x * (1 - masks)
         
         coarse_raw = normalize_tensor(coarse_raw, smin=-1, smax=1, tmin=0, tmax=255)
         refine_raw = normalize_tensor(refine_raw, smin=-1, smax=1, tmin=0, tmax=255)
