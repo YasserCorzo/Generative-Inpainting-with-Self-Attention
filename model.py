@@ -263,3 +263,18 @@ class SelfAttention(nn.Module):
             return out ,attention
         else:
             return out
+
+class InpaintModel(nn.Module):
+    def __init__(self):
+        super(InpaintModel, self).__init__()
+
+        self.generator = Generator()
+        self.discriminator = Discriminator()
+
+    def forward(self, images, masks):
+        """
+        dim of images: batch_size x channels x H x W
+        dim of mask: batch_size x H x W
+        """
+        gen_images = self.generator(images, masks)
+        return gen_images
