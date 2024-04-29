@@ -120,6 +120,7 @@ class Generator(nn.Module):
         # return coarse_clip
 
         coarse_raw = coarse_clip
+        coarse_raw = normalize_tensor(coarse_raw, smin=-1, smax=1, tmin=0, tmax=255)
 
         # process coarse network output for refinement network input
         coarse_processed = coarse_clip * masks + masked_imgs
@@ -130,9 +131,11 @@ class Generator(nn.Module):
         refine_clip = torch.clamp(refine_out, -1.0, 1.0)
 
         refine_raw = refine_clip
+        refine_raw = normalize_tensor(refine_raw, smin=-1, smax=1, tmin=0, tmax=255)
 
         # merge original image with refinement
         reconstructed_image = refine_clip * masks + x * (1 - masks)
+        reconstructed_image = normalize_tensor(reconstructed_image, smin=-1, smax=1, tmin=0, tmax=255)
 
         return reconstructed_image, coarse_raw, refine_raw
     
