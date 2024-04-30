@@ -35,7 +35,7 @@ class Discriminator(nn.Module):
         dim of x: batch_size x channels x H x W
         dim of masks: batch_size x H x W
         """
-        x = normalize_tensor(x, 0, 255, -1, 1)
+        #x = normalize_tensor(x, 0, 255, -1, 1)
         masks = masks.unsqueeze(1) # batch_size x 1 x 256 x 256
         input = torch.cat([x, masks], dim=1) # batch_size x (channels + 1) x 256 x 256
         out = self.layers(input) 
@@ -99,48 +99,33 @@ class Generator(nn.Module):
         dim of x: batch_size x channels x H x W
         dim of mask: batch_size x H x W
         """
-        #print("shape of images (B x C x H x W):", x.shape)
-        #print("shape of masks (B x H x W):", masks.shape)
-        # TODO: normalize images and pair images with corresponding masks as input
-        # input will contain masked images
-        #x = x.permute(0, 3, 1, 2) # batch_size x channels x 256 x 256
         masks = masks.unsqueeze(1) # batch_size x 1 x 256 x 256
-        normalized_x = normalize_tensor(x, smin=0, smax=255, tmin=-1, tmax=1)
-        masked_imgs = normalized_x * (1 - masks)
-        #print(masks.shape)
-        #print(masked_imgs.shape)
+        masked_imgs = x * (1 - masks)
+
         input = torch.cat([masked_imgs, masks], dim=1) # batch_size x (channels + 1) x 256 x 256
-        #print("shape of input into coarse network:", input.shape)
 
         # coarse network
         coarse_out = self.coarse_network(input)
         # clip output so values are between -1 and 1
         coarse_clip = torch.clamp(coarse_out, -1.0, 1.0)
 
-        # return clipped output of coarse network
-        # return coarse_clip
-
         coarse_raw = coarse_clip
 
         # process coarse network output for refinement network input
-        coarse_processed = masked_imgs + coarse_clip * masks
-    
+        coarse_processed = coarse_clip * masks + masked_imgs
+
         # refinement network
         refine_in = torch.cat([coarse_processed, masks], dim=1)
         refine_out = self.refinement_network(refine_in)
         refine_clip = torch.clamp(refine_out, -1.0, 1.0)
 
         refine_raw = refine_clip
-        
+
         # merge original image with refinement
-        reconstructed_image = refine_clip * masks + normalized_x * (1 - masks)
-        
-        coarse_raw = normalize_tensor(coarse_raw, smin=-1, smax=1, tmin=0, tmax=255)
-        refine_raw = normalize_tensor(refine_raw, smin=-1, smax=1, tmin=0, tmax=255)
-        reconstructed_image = normalize_tensor(reconstructed_image, smin=-1, smax=1, tmin=0, tmax=255)
-        
+        reconstructed_image = refine_clip * masks + x * (1 - masks)
+
         return reconstructed_image, coarse_raw, refine_raw
-    
+        
     def recon_loss_function(self, x_hat, x, masks, alpha):
         '''
         dim of x_hat & x: batch_size x 3 x H x W
@@ -181,68 +166,6 @@ class Generator(nn.Module):
         dim of x_hat & x: batch_size x 3 x H x W
         '''
         return (-1) * torch.mean(x_hat)
-
-'''
-class SelfAttention(nn.Module):
-
-    def __init__(self, in_channels: int = 3,
-                       inter_channels: int = None):
-
-        super(SelfAttention, self).__init__()
-        if inter_channels is None:
-            inter_channels = in_channels // 8
-        self.in_channels = in_channels
-        self.inter_channels = inter_channels
-        self.gamma = nn.Parameter(torch.zeros(1))
-
-        self.conv_key = nn.Conv2d(in_channels=in_channels,
-                                  out_channels=inter_channels,
-                                  kernel_size=1)
-
-        self.conv_query = nn.Conv2d(in_channels=in_channels,
-                                    out_channels=inter_channels,
-                                    kernel_size=1)
-
-        self.conv_value = nn.Conv2d(in_channels=in_channels,
-                                    out_channels=inter_channels,
-                                    kernel_size=1)
-
-        self.conv_final = nn.Conv2d(in_channels=inter_channels,
-                                    out_channels=in_channels,
-                                    kernel_size=1)
-
-    def forward(self, x: torch.Tensor):
-        batch_size = x.shape[0]
-        channels = x.shape[1]
-        height = x.shape[2]
-        width = x.shape[3]
-
-        #key, query, value compute
-        key = self.conv_key(x)
-        query = self.conv_query(x)
-        value = self.conv_value(x)
-
-        #resizing
-        key = key.view(batch_size, self.inter_channels, height * width)
-        query = query.view(batch_size, self.inter_channels, height * width)
-        value = value.view(batch_size, self.inter_channels, height * width)
-        query = query.permute(0, 2, 1)
-
-        #get attention scores
-        attention = torch.bmm(query, key)
-        #normalize attention score with softmax
-        attention = torch.softmax(attention, dim=1)
-        
-        #multiplying attention and value to get output
-        attention_value = torch.bmm(value, attention)
-        attention_value = attention_value.view(batch_size, self.inter_channels, height, width)
-
-        #final conv layer
-        output = self.conv_final(attention_value)
-        output = self.gamma * output + x
-
-        return output, attention
-'''
 
 class SelfAttention(nn.Module):
     """ Self attention Layer"""

@@ -31,13 +31,6 @@ def get_images(batch_size):
     val_size = len(cifar10) - train_size
     train_set, val_set = torch.utils.data.random_split(cifar10, [train_size, val_size])
 
-    '''
-    caltech256 = torchvision.datasets.Caltech256(root='./data', download=True, transform=transform)
-    train_size = int(0.6 * len(caltech256))
-    val_size = len(caltech256) - train_size
-    train_set, val_set = torch.utils.data.random_split(caltech256, [train_size, val_size])
-    '''
-
     train_loader = torch.utils.data.DataLoader(train_set, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
     val_loader = torch.utils.data.DataLoader(val_set, batch_size=batch_size, shuffle=False, collate_fn=collate_fn)
     return train_loader, val_loader
@@ -109,14 +102,3 @@ def get_masked_images(image_loader, binary_mask):
         break
 
     return masked_images
-
-'''
-batch_size = 2
-train_loader, val_loader = get_images(batch_size)
-
-image_size = (256, 256)
-square_size = 30
-binary_mask = get_mask(image_size, square_size)
-
-get_masked_images(train_loader, binary_mask)
-'''
