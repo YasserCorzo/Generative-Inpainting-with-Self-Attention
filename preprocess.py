@@ -49,18 +49,14 @@ def get_mask(image_size, square_size):
 def get_random_mask(image_size, square_size):
     mask = np.zeros(image_size, dtype=np.uint8)
     
-    # Randomly select the starting position of the square
     start_x = np.random.randint(0, image_size[0] - square_size + 1)
     start_y = np.random.randint(0, image_size[1] - square_size + 1)
     
-    # Calculate the end position based on the starting position and square size
     end_x = start_x + square_size
     end_y = start_y + square_size
     
-    # Set the values within the square region of mask to 1
     mask[start_x:end_x, start_y:end_y] = 1
     
-    # Convert mask to a NumPy array of floats and then to a PyTorch tensor
     mask = np.asarray(mask, np.float32)
     mask = torch.from_numpy(mask)
     

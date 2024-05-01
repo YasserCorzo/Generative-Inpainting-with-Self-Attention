@@ -80,7 +80,7 @@ class Generator(nn.Module):
             GatedConv(in_channels=128, out_channels=128, kernel_size=3, stride=1, padding=1), # batch_size x 128 x 64 x 64
             GatedConv(in_channels=128, out_channels=128, kernel_size=3, stride=1, padding=1), # batch_size x 128 x 64 x 64
 
-            SelfAttention(in_dim=128),   # need to check this layer                      # batch_size x 128 x 64 x 64
+            SelfAttention(in_dim=128),                                                        # batch_size x 128 x 64 x 64
 
             GatedConv(in_channels=128, out_channels=128, kernel_size=3, stride=1, padding=1), # batch_size x 128 x 64 x 64
             GatedConv(in_channels=128, out_channels=128, kernel_size=3, stride=1, padding=1), # batch_size x 128 x 64 x 64

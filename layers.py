@@ -68,4 +68,3 @@ class SpectralNormConv(nn.Module):
         x = self.spect_norm_conv(x)
         x = self.act_func(x)
         return x
-
